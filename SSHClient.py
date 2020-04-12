@@ -11,15 +11,13 @@ from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
 
 class SSHClient (object):
 
-    def __init__(self, port, opponent):
+    def __init__(self, port, opponent, p, q, e, m, g):
         self.port = port
         self.opponent = opponent
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname(socket.gethostname())
-        # Should be modified later
-        self.set_key_exchange(0, 0)
-        # Should be modified later
-        self.set_public_key_crypto(0, 0, 0)
+        self.ip = socket.gethostbyname(socket.gethostname())    # Unique id
+        self.set_key_exchange(g, m)
+        self.set_public_key_crypto(p, q, e)
 
     def connect(self):
         connect = False
@@ -68,16 +66,13 @@ class SSHClient (object):
 
     def start_session(self):
         # Sending and receiving the public keys ###
-        # Should be modified later
-        N_bob = self.receive(0)
-        # Should be modified later
-        e_bob = self.receive(0)
+        N_bob = self.receive(4096)
+        e_bob = self.receive(128)
         N, e = self.rsa.get_public_key()
         self.send(N)
         self.send(e)
         alice = self.ip                             # Unique id for Alice
         bob = self.ip                               # Unique id for Bob
-        self.diffie_hellman.set_new_secret_exponent(get_random_bytes(256))
         Ra, public_a = self.perform_step1()
         K, H, bob_auth = self.perform_step2(
             alice, bob, Ra, public_a, N_bob, e_bob)
@@ -105,8 +100,7 @@ class SSHClient (object):
                 print("  Please only enter either (Y/y) or (N/n) . . .")
             else:
                 self.send(new_exchange_alice)
-                # Should be modified later
-                new_exchange_bob = self.receive(0)
+                new_exchange_bob = self.receive(128)
                 bob_rej = new_exchange_bob == "n" or new_exchange_bob == "N"
                 if alice_rej:
                     self.disconnect()
@@ -125,6 +119,7 @@ class SSHClient (object):
     ################## Step (1) ##################
     def perform_step1(self):
         Ra = get_random_bytes(32)
+        self.diffie_hellman.set_new_secret_exponent(get_random_bytes(256))
         public_a = self.diffie_hellman.get_public_value()
         self.send(Ra)
         self.send(public_a)
@@ -134,9 +129,8 @@ class SSHClient (object):
     ################## Step (2) ##################
     def perform_step2(self, alice, bob, Ra, public_a, N_bob, e_bob):
         Rb = self.receive(256)
-        public_b = self.receive(256)
-        # Should be modified later
-        Sb = self.receive(0)
+        public_b = self.receive(2048)
+        Sb = self.receive(4096)
         K = self.diffie_hellman.get_secret_key(public_b)
         H = self.diffie_hellman.generate_H(
             alice, bob, Ra, Rb, public_a, public_b, K)
@@ -156,8 +150,7 @@ class SSHClient (object):
         self.set_symmetric_crypto(K, 16, self.opponent)
         # Should be modified later
         self.secure_send((alice, Sa))
-        # Should be modified later
-        authenticated = self.receive(0)
+        authenticated = self.receive(128)
         if authenticated:
             print("  Congratulations: You are now authenticated.")
             print("  Now you can start communicating with {} securely." .format(

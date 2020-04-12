@@ -12,15 +12,13 @@ from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
 
 class SSHServer (object):
 
-    def __init__(self, port, opponent):
+    def __init__(self, port, opponent, p, q, e, m, g):
         self.port = port
         self.opponent = opponent
         self.conn_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname(socket.gethostname())   # Bob's id
-        # Should be modified later
-        self.set_key_exchange(0, 0)
-        # Should be modified later
-        self.set_public_key_crypto(0, 0, 0)
+        self.ip = socket.gethostbyname(socket.gethostname())   # Unique id
+        self.set_key_exchange(g, m)
+        self.set_public_key_crypto(p, q, e)
 
     def bind(self):
         self.conn_socket.bind(("", self.port))
@@ -69,16 +67,13 @@ class SSHServer (object):
         N, e = self.rsa.get_public_key()
         self.send(N)
         self.send(e)
-        # Should be modified later
-        N_alice = self.receive(0)
-        # Should be modified later
-        e_alice = self.receive(0)
+        N_alice = self.receive(4096)
+        e_alice = self.receive(128)
         Ra, public_a, Rb, public_b = self.perform_step1()
         K, H = self.perform_step2(
             self.alice, self.ip, Ra, Rb, public_a, public_b)
-        # Should be modified later
         # To make sure for Bob that he is authenticated
-        bob_auth = self.receive(0)
+        bob_auth = self.receive(128)
         if bob_auth:
             print("  Congratulations: you are now authenticated successfully.")
             print("  Now it is {}'s time, authenticating . . ." .format(self.opponent))
@@ -101,8 +96,7 @@ class SSHServer (object):
             if not (bob_conf) and not(bob_rej):
                 print("  Please only enter either (Y/y) or (N/n) . . .")
             else:
-                # Should be modified later
-                new_exchange_alice = self.receive(0)
+                new_exchange_alice = self.receive(128)
                 self.send(new_exchange_bob)
                 alice_rej = new_exchange_alice == "n" or new_exchange_alice == "N"
                 if bob_rej:
@@ -121,10 +115,8 @@ class SSHServer (object):
     ##############################################
     ################## Step (1) ##################
     def perform_step1(self):
-        # Should be modified later
-        Ra = self.receive(0)
-        # Should be modified later
-        public_a = self.receive(0)
+        Ra = self.receive(256)
+        public_a = self.receive(2048)
         Rb = get_random_bytes(32)
         self.diffie_hellman.set_new_secret_exponent(get_random_bytes(256))
         public_b = self.diffie_hellman.get_public_value()
@@ -148,8 +140,7 @@ class SSHServer (object):
     ##############################################
     ################## Step (3) ##################
     def perform_step3(self, alice, H, K, N_alice, e_alice):
-        # Should be modified later
-        M = self.receive(0)
+        M = self.receive(128)
         c = b64decode(M)
         iv = c[:16]
         self.set_symmetric_crypto(K, 16, self.opponent, iv)
