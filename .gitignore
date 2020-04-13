@@ -1,5 +1,9 @@
 player1.py
 player2.py
 test.py
+
 __pycache__
+*/__pycache__
+
 __init__.py
+*/__init__.py
