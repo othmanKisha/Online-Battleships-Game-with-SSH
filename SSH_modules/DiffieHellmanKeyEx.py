@@ -1,4 +1,4 @@
-from ModArithmetic import repeated_squaring
+from . import ModArithmetic as mod_op
 from hashlib import sha256
 
 ###################################################################################################
@@ -22,13 +22,13 @@ class KeyExchange (object):
         self.exp = exp
 
     def get_public_value(self):
-        public_value = repeated_squaring(
+        public_value = mod_op.repeated_squaring(
             div=self.g, modulus=self.m, power=self.exp)
         return public_value
 
     # exp_recv is g^(the other's exponent) mod m
     def get_secret_key(self, exp_recv):
-        secret_key = repeated_squaring(
+        secret_key = mod_op.repeated_squaring(
             div=exp_recv, modulus=self.m, power=self.exp)
         return secret_key
 
