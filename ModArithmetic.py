@@ -9,9 +9,9 @@ def repeated_squaring(div, modulus, power):
     elif power == 1:
         return Mod(div, modulus)
     elif Mod(power, 2) != 0:
-        return Mod(div * repeated_squaring(div*div, modulus, (power - 1) / 2), modulus)
+        return Mod(div * repeated_squaring(div*div, modulus, (power - 1) // 2), modulus)
     else:
-        return Mod(repeated_squaring(div * div, modulus, power / 2), modulus)
+        return Mod(repeated_squaring(div * div, modulus, power // 2), modulus)
 
 
 def Mod(div, modulus):
@@ -34,7 +34,7 @@ def xgcd(a, b):
     prevx, x = 1, 0
     prevy, y = 0, 1
     while b:
-        q = a/b
+        q = a // b
         x, prevx = prevx - q*x, x
         y, prevy = prevy - q*y, y
         a, b = b, Mod(a, b)
