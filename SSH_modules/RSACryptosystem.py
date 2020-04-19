@@ -34,13 +34,10 @@ class Cryptosystem (object):
     def digital_sign(self, plaintext):
         digital_signature = mod_op.repeated_squaring(
             div=plaintext, modulus=self.N, power=self.d)
-        print(plaintext)
-        #digital_signature = b64encode(digital_signature)
         return digital_signature
 
     # This method is for signature verification using the other party's public key ==> plaintext = {signature}other party
     def verify_signature(self, N, e, S, ip, H):
-        #S = b64decode(S)
         verify = mod_op.repeated_squaring(div=S, modulus=N, power=e)
         ip_bytes = bytes(ip.encode())
         test = int.from_bytes((ip_bytes + H), 'little')

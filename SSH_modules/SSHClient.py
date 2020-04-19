@@ -1,8 +1,12 @@
 import socket
+from Crypto.Cipher import AES as Symmetric
+from Crypto.Util.Padding import pad
+from base64 import b64encode, b64decode
 from Crypto.Random import get_random_bytes
 from . import AESCryptosystem as AES
 from . import RSACryptosystem as RSA
 from . import DiffieHellmanKeyEx as DiffieHellman
+from . import ModArithmetic as mod_op
 
 ###########################################################################################
 ########################### Phase 3: SSH Protocol Client ##################################
@@ -68,26 +72,25 @@ class Client (object):
     def start_session(self):
         # Sending and receiving the public keys ###
         N, e = self.rsa.get_public_key()
-        self.send(N)
-        self.send(e)
-        N_bob = self.receive(4096)
-        e_bob = self.receive(128)
+        self.send(str(N).encode())
+        self.send(str(e).encode())
+        N_bob = int(self.receive(4096).decode())
+        e_bob = int(self.receive(128).decode())
         alice = self.username
         self.send(alice.encode())
-        bob = self.receive(128).decode()
+        bob = self.receive(1024).decode()
         Ra, public_a = self.perform_step1()
         K, H, bob_auth = self.perform_step2(
             alice, bob, Ra, public_a, N_bob, e_bob)
-        # To make sure for Bob that he is authenticated
-        self.send(bob_auth)
+        self.send(str(bob_auth).encode())
         if bob_auth:
             self.diffie_hellman.destroy_exponent()
             alice_auth = self.perform_step3(alice, H, K)
             if alice_auth:
                 return True
-            print("  Unfortunately, you failed to be authenticated successfully.")
+            print("  >Unfortunately, you failed to be authenticated successfully.")
             return False
-        print("  Unfortunately, {} failed to be authenticated successfully." .format(
+        print("  >Unfortunately, {} failed to be authenticated successfully." .format(
             self.opponent))
         return False
 
@@ -95,67 +98,72 @@ class Client (object):
         self.aes.destroy_key()
         while True:
             new_exchange_alice = input(
-                "  Do you want to play again (y/n)? . . .")
+                "  >Do you want to play again (y/n)? . . .")
             alice_conf = new_exchange_alice == "y" or new_exchange_alice == "Y"
             alice_rej = new_exchange_alice == "n" or new_exchange_alice == "N"
             if not (alice_conf) and not(alice_rej):
-                print("  Please only enter either (Y/y) or (N/n) . . .")
+                print("  >Please only enter either (Y/y) or (N/n) . . .")
             else:
-                self.send(new_exchange_alice)
-                new_exchange_bob = self.receive(128)
+                self.send(new_exchange_alice.encode())
+                new_exchange_bob = self.receive(1024).decode()
                 bob_rej = new_exchange_bob == "n" or new_exchange_bob == "N"
                 if alice_rej:
                     self.disconnect()
                     return True
                 else:
                     if bob_rej:
-                        print("  Unfortunately, {} does not want to play." .format(
+                        print("  >Unfortunately, {} does not want to play." .format(
                             self.opponent))
                         self.disconnect()
                         return True
                     else:
-                        print("  Starting new session . . .")
+                        print("  >Starting new session . . .")
                         return False
 
     ##############################################
     ################## Step (1) ##################
     def perform_step1(self):
-        Ra = get_random_bytes(32)
-        a = get_random_bytes(256)
-        print("  Your a is equal to: {}".format(a))
+        Ra = int.from_bytes(get_random_bytes(32), 'little')
+        a = int.from_bytes(get_random_bytes(256), 'little')
+        print("\n  >Your a is equal to: {}\n".format(a))
         self.diffie_hellman.set_new_secret_exponent(a)
         public_a = self.diffie_hellman.get_public_value()
-        self.send(Ra)
-        self.send(public_a)
-        return Ra, public_a
+        self.send(str(Ra).encode())
+        self.send(str(public_a).encode())
+        return (Ra, public_a)
 
     ##############################################
     ################## Step (2) ##################
     def perform_step2(self, alice, bob, Ra, public_a, N_bob, e_bob):
-        Rb = self.receive(256)
-        public_b = self.receive(2048)
-        Sb = self.receive(4096)
+        Rb = int(self.receive(256).decode())
+        public_b = int(self.receive(2048).decode())
+        Sb = int(self.receive(4096).decode())
         K = self.diffie_hellman.get_secret_key(public_b)
         H = self.diffie_hellman.generate_H(
             alice, bob, Ra, Rb, public_a, public_b, K)
-        print("  Authenticating . . .")
+        print("  >Authenticating . . .")
         authenticated = self.rsa.verify_signature(N_bob, e_bob, Sb, bob, H)
         if authenticated:
-            print("  Congratulation: {} is authenticated successfully." .format(
+            print("  >Congratulation: {} is authenticated successfully." .format(
                 self.opponent))
-            print("  Now it is your time, authenticating . . .")
-        return K, H, authenticated
+            print("  >Now it is your time, authenticating . . .")
+        return (K, H, authenticated)
 
     ##############################################
     ################## Step (3) ##################
     def perform_step3(self, alice, H, K):
+        self.set_symmetric_crypto(K, 16, self.opponent)
         M = bytes(alice.encode()) + H
         Sa = self.rsa.digital_sign(int.from_bytes(M, 'little'))
-        self.set_symmetric_crypto(K, 16, self.opponent)
-        self.secure_send((Sa + bytes(alice.encode())))
-        authenticated = self.receive(128)
+        Sa_len = mod_op.getBytesLen(Sa)
+        cipher = Symmetric.new(self.aes.key, Symmetric.MODE_CBC, self.aes.iv)
+        C = self.aes.iv + \
+            cipher.encrypt(pad(bytes(alice.encode()) +
+                               (Sa.to_bytes(Sa_len, 'little')), 16))
+        self.send(b64encode(C))
+        authenticated = bool(self.receive(1024).decode())
         if authenticated:
-            print("  Congratulations: You are now authenticated.")
-            print("  Now you can start communicating with {} securely." .format(
+            print("  >Congratulations: You are now authenticated.")
+            print("  >Now you can start communicating with {} securely." .format(
                 self.opponent))
         return authenticated

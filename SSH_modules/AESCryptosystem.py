@@ -3,6 +3,7 @@ from base64 import b64decode, b64encode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
+from . import ModArithmetic as mod_op
 
 ########################################################################################
 ########################### Phase 2: AES Cryptosystem ##################################
@@ -12,7 +13,8 @@ from Crypto.Random import get_random_bytes
 class Cryptosystem (object):
 
     def __init__(self, key, bs, opponent):
-        self.key = sha256(key.encode('utf8')).digest()
+        key_len = mod_op.getBytesLen(key)
+        self.key = sha256(key.to_bytes(key_len, 'little')).digest()
         self.bs = bs
         self.opponent = opponent
 
@@ -25,6 +27,10 @@ class Cryptosystem (object):
         print("  The IV value received from {}: {}" .format(
             self.opponent, self.iv.hex()))
         print("--------------------------------------------------------------------")
+
+    def encryption_bytes(self, plaintext):
+        cipher = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
+        return b64encode(self.iv + cipher.encrypt(pad(plaintext, self.bs)))
 
     # The Encryption Method {IV is one of the parameters of the method}
     def encryption(self, plaintext):
