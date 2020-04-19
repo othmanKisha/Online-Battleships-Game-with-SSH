@@ -12,7 +12,7 @@ class Cryptosystem (object):
         self.q = q
         self.e = e
         self.d = mod_op.multiplicative_inverse(
-            self.e, (self.p - 1) * (self.q - 1))
+            a=self.e, m=(self.p - 1) * (self.q - 1))
         self.N = self.p * self.q
 
     # The encryption method {C = (plaintext ^ e) mod N} ==> C = {plaintext}Bob
@@ -34,15 +34,16 @@ class Cryptosystem (object):
     def digital_sign(self, plaintext):
         digital_signature = mod_op.repeated_squaring(
             div=plaintext, modulus=self.N, power=self.d)
-        digital_signature = b64encode(digital_signature)
+        print(plaintext)
+        #digital_signature = b64encode(digital_signature)
         return digital_signature
 
     # This method is for signature verification using the other party's public key ==> plaintext = {signature}other party
     def verify_signature(self, N, e, S, ip, H):
-        S = b64decode(S)
+        #S = b64decode(S)
         verify = mod_op.repeated_squaring(div=S, modulus=N, power=e)
-        # Should be modified later
-        test = (ip, H)
+        ip_bytes = bytes(ip.encode())
+        test = int.from_bytes((ip_bytes + H), 'little')
         if verify == test:
             return True
         return False

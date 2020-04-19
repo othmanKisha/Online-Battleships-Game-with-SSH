@@ -4,6 +4,7 @@ from Crypto.Random import get_random_bytes
 from AESCryptosystem import Cryptosystem as AESCrypto
 from RSACryptosystem import Cryptosystem as RSACrypto
 from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
+from . import ModArithmetic as mod_op
 
 ###########################################################################################
 ########################### Phase 3: SSH Protocol Server ##################################
@@ -12,11 +13,12 @@ from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
 
 class Server (object):
 
-    def __init__(self, port, opponent, p, q, e, m, g):
+    def __init__(self, port, opponent, username, p, q, e, m, g):
         self.port = port
         self.opponent = opponent
         self.conn_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname(socket.gethostname())   # Unique id
+        self.ip = socket.gethostbyname(socket.gethostname())
+        self.username = username
         self.set_key_exchange(g, m)
         self.set_public_key_crypto(p, q, e)
 
@@ -65,13 +67,16 @@ class Server (object):
     def start_session(self):
         ### Sending and receiving the public keys ###
         N, e = self.rsa.get_public_key()
-        self.send(N)
-        self.send(e)
         N_alice = self.receive(4096)
         e_alice = self.receive(128)
+        self.send(N)
+        self.send(e)
+        alice = self.receive(128).decode()
+        bob = self.username
+        self.send(bob.encode())
         Ra, public_a, Rb, public_b = self.perform_step1()
         K, H = self.perform_step2(
-            self.alice, self.ip, Ra, Rb, public_a, public_b)
+            alice, bob, Ra, Rb, public_a, public_b)
         # To make sure for Bob that he is authenticated
         bob_auth = self.receive(128)
         if bob_auth:
@@ -118,7 +123,9 @@ class Server (object):
         Ra = self.receive(256)
         public_a = self.receive(2048)
         Rb = get_random_bytes(32)
-        self.diffie_hellman.set_new_secret_exponent(get_random_bytes(256))
+        b = get_random_bytes(256)
+        print("  Your b is equal to: {}".format(b))
+        self.diffie_hellman.set_new_secret_exponent(b)
         public_b = self.diffie_hellman.get_public_value()
         return Ra, public_a, Rb, public_b
 
@@ -128,8 +135,8 @@ class Server (object):
         K = self.diffie_hellman.get_secret_key(public_a)
         H = self.diffie_hellman.generate_H(
             alice, bob, Ra, Rb, public_a, public_b, K)
-        # Should be modified later
-        Sb = self.rsa.digital_sign((H, bob))
+        M = bytes(bob.encode()) + H
+        Sb = self.rsa.digital_sign(int.from_bytes(M, 'little'))
         self.send(Rb)
         self.send(public_b)
         self.send(Sb)
@@ -145,8 +152,9 @@ class Server (object):
         iv = c[:16]
         self.set_symmetric_crypto(K, 16, self.opponent, iv)
         M = self.aes.decryption(M)
-        # Should be modified later
-        Sa = (M - alice)
+        alice_len = len(bytes(alice.encode()))
+        Sa_bytes = M.to_bytes(mod_op.getBytesLen(M), 'little')[alice_len:]
+        Sa = int.from_bytes(Sa_bytes, 'little')
         authenticated = self.rsa.verify_signature(
             N_alice, e_alice, Sa, alice, H)
         if authenticated:

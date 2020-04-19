@@ -11,11 +11,12 @@ from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
 
 class Client (object):
 
-    def __init__(self, port, opponent, p, q, e, m, g):
+    def __init__(self, port, opponent, username, p, q, e, m, g):
         self.port = port
         self.opponent = opponent
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname(socket.gethostname())    # Unique id
+        self.ip = socket.gethostbyname(socket.gethostname())
+        self.username = username
         self.set_key_exchange(g, m)
         self.set_public_key_crypto(p, q, e)
 
@@ -66,13 +67,14 @@ class Client (object):
 
     def start_session(self):
         # Sending and receiving the public keys ###
-        N_bob = self.receive(4096)
-        e_bob = self.receive(128)
         N, e = self.rsa.get_public_key()
         self.send(N)
         self.send(e)
-        alice = self.ip                             # Unique id for Alice
-        bob = self.ip                               # Unique id for Bob
+        N_bob = self.receive(4096)
+        e_bob = self.receive(128)
+        alice = self.username
+        self.send(alice.encode())
+        bob = self.receive(128).decode()
         Ra, public_a = self.perform_step1()
         K, H, bob_auth = self.perform_step2(
             alice, bob, Ra, public_a, N_bob, e_bob)
@@ -119,7 +121,9 @@ class Client (object):
     ################## Step (1) ##################
     def perform_step1(self):
         Ra = get_random_bytes(32)
-        self.diffie_hellman.set_new_secret_exponent(get_random_bytes(256))
+        a = get_random_bytes(256)
+        print("  Your a is equal to: {}".format(a))
+        self.diffie_hellman.set_new_secret_exponent(a)
         public_a = self.diffie_hellman.get_public_value()
         self.send(Ra)
         self.send(public_a)
@@ -145,11 +149,10 @@ class Client (object):
     ##############################################
     ################## Step (3) ##################
     def perform_step3(self, alice, H, K):
-        # Should be modified later
-        Sa = self.rsa.digital_sign((H, alice))
+        M = bytes(alice.encode()) + H
+        Sa = self.rsa.digital_sign(int.from_bytes(M, 'little'))
         self.set_symmetric_crypto(K, 16, self.opponent)
-        # Should be modified later
-        self.secure_send((alice, Sa))
+        self.secure_send((Sa + bytes(alice.encode())))
         authenticated = self.receive(128)
         if authenticated:
             print("  Congratulations: You are now authenticated.")

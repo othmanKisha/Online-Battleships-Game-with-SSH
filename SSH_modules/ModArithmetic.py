@@ -1,21 +1,23 @@
+import math
+
 #########################################################################################################
 ########################### Phase 3: Modular Arithmetic Helper Methods ##################################
 #########################################################################################################
 
 
 def repeated_squaring(div, modulus, power):
-    if power == 0:
-        return 1
-    elif power == 1:
-        return Mod(div, modulus)
-    elif Mod(power, 2) != 0:
-        return Mod(div * repeated_squaring(div*div, modulus, (power - 1) // 2), modulus)
-    else:
-        return Mod(repeated_squaring(div * div, modulus, power // 2), modulus)
+    x = 1
+    bits = "{0:b}".format(power)
+    for _, bit in enumerate(bits):
+        if bit == '1':
+            x = ((x**2) * div) % modulus
+        elif bit == '0':
+            x = (x**2) % modulus
+    return x % modulus
 
 
-def Mod(div, modulus):
-    return div % modulus
+def getBytesLen(bytes_num):
+    return math.ceil(bytes_num.bit_length() / 8)
 
 # Used the python code from the link attached in the document: https://stackoverflow.com/questions/4798654/modular-multiplicative-inverse-function-in-python
 
@@ -37,5 +39,5 @@ def xgcd(a, b):
         q = a // b
         x, prevx = prevx - q*x, x
         y, prevy = prevy - q*y, y
-        a, b = b, Mod(a, b)
+        a, b = b, a % b
     return a, prevx, prevy
