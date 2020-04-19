@@ -1,8 +1,8 @@
 import socket
 from Crypto.Random import get_random_bytes
-from AESCryptosystem import Cryptosystem as AESCrypto
-from RSACryptosystem import Cryptosystem as RSACrypto
-from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
+from . import AESCryptosystem as AES
+from . import RSACryptosystem as RSA
+from . import DiffieHellmanKeyEx as DiffieHellman
 
 ###########################################################################################
 ########################### Phase 3: SSH Protocol Client ##################################
@@ -55,15 +55,15 @@ class Client (object):
         return received_msg
 
     def set_symmetric_crypto(self, K, bs, Opponent):
-        self.aes = AESCrypto(K, bs, Opponent)
+        self.aes = AES.Cryptosystem(K, bs, Opponent)
         self.aes.generate_initialization_vector()
         self.aes.print_key()
 
     def set_public_key_crypto(self, p, q, e):
-        self.rsa = RSACrypto(p, q, e)
+        self.rsa = RSA.Cryptosystem(p, q, e)
 
     def set_key_exchange(self, g, m):
-        self.diffie_hellman = DiffieHellman(g, m)
+        self.diffie_hellman = DiffieHellman.KeyExchange(g, m)
 
     def start_session(self):
         # Sending and receiving the public keys ###
