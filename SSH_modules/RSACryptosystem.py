@@ -11,8 +11,7 @@ class Cryptosystem (object):
         self.p = p
         self.q = q
         self.e = e
-        self.d = mod_op.multiplicative_inverse(
-            a=self.e, m=(self.p - 1) * (self.q - 1))
+        self.d = mod_op.multiplicative_inverse(self.e, (self.p-1)*(self.q-1))
         self.N = self.p * self.q
 
     # The encryption method {C = (plaintext ^ e) mod N} ==> C = {plaintext}Bob
@@ -37,10 +36,10 @@ class Cryptosystem (object):
         return digital_signature
 
     # This method is for signature verification using the other party's public key ==> plaintext = {signature}other party
-    def verify_signature(self, N, e, S, ip, H):
+    def verify_signature(self, N, e, S, id, H):
         verify = mod_op.repeated_squaring(div=S, modulus=N, power=e)
-        ip_bytes = bytes(ip.encode())
-        test = int.from_bytes((ip_bytes + H), 'little')
+        id_bytes = bytes(id.encode())
+        test = int.from_bytes((id_bytes + H), 'little')
         if verify == test:
             return True
         return False
@@ -48,3 +47,7 @@ class Cryptosystem (object):
     # This method to get the public key without asking for N and e
     def get_public_key(self):
         return (self.N, self.e)
+
+    # This method is not for implementing the protocol or RSA, but it will be used for testing only
+    def manipulate_private_key(self, d):
+        self.d = d

@@ -23,18 +23,19 @@ def main():
     while True:
         if not client.start_session():
             break
+        print("  ------------ Secured Connection ------------")
         ships_num = game_board.set_ships_number()
         game_board.insert_ship()
         game_board.print_board("  This is how your ships are placed: ")
         client.secure_send(ships_num)
-        oppo_ships = client.secure_receive(128)
+        oppo_ships = client.secure_receive()
         print("  Bob have {} ships placed in the battle." .format(oppo_ships))
 
         while True:
             if turn != "Alice":
                 print("--------- Bob's turn -------")
-                row = client.secure_receive(128)
-                col = client.secure_receive(128)
+                row = client.secure_receive()
+                col = client.secure_receive()
                 res = game_board.guess_receive(row, col)
                 client.secure_send(res)
                 turn = "Alice"
@@ -47,7 +48,7 @@ def main():
                         break
                 client.secure_send(row)
                 client.secure_send(col)
-                res = client.secure_receive(128)
+                res = client.secure_receive()
                 game_board.guess_place(res, row, col)
                 turn = "Bob"
 

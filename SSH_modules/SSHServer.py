@@ -1,5 +1,5 @@
 import socket
-from Crypto.Cipher import AES as Symmetric
+from Crypto.Cipher import AES as SymCrypto
 from Crypto.Util.Padding import unpad
 from base64 import b64encode, b64decode
 from Crypto.Random import get_random_bytes
@@ -20,16 +20,22 @@ class Server (object):
         self.opponent = opponent
         self.conn_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ip = socket.gethostbyname(socket.gethostname())
+        self.BUFF_SIZE = 8192
         self.username = username
         self.set_key_exchange(g, m)
         self.set_public_key_crypto(p, q, e)
+        # This line is for testing the case when trudy tries to communicate as alice
+        # self.rsa.manipulate_private_key(1234)
 
     def bind(self):
-        self.conn_socket.bind(("", self.port))
-        # waiting to connect to the client(player 1)
-        self.conn_socket.listen(5)
-        # accepting the connection, self.alice is unique id for alice
-        self.socket, self.alice = self.conn_socket.accept()
+        try:
+            self.conn_socket.bind(("", self.port))
+            # waiting to connect to the client(player 1)
+            self.conn_socket.listen(5)
+            # accepting the connection, self.alice is unique id for alice
+            self.socket, self.alice = self.conn_socket.accept()
+        except Exception as e:
+            print("  error: ", e)
         print("  Congartulations: you are connect, now you can start the game. ")
         print("  IP address of {}: {}" .format(self.opponent, self.alice[0]))
 
@@ -39,51 +45,72 @@ class Server (object):
         self.socket.close()
 
     def send(self, message):
+        message_length = len(message).to_bytes(3, 'little')
+        self.socket.send(message_length)
+        #print("  message length: ", len(message))
         self.socket.send(message)
+        #print("  message: ", message)
 
     def secure_send(self, message):
         ciphertext = self.aes.encryption(message)
         self.send(ciphertext)
 
-    def receive(self, size):
-        received_msg = self.socket.recv(size)
-        return received_msg
+    def receive(self):
+        message_length = int.from_bytes(self.socket.recv(3), 'little')
+        #print("  message length: ", message_length)
+        message = self.socket.recv(message_length)
+        #print("  message: ", message)
+        return message
 
-    def secure_receive(self, size):
-        ciphertext = self.receive(size)
-        received_msg = self.aes.decryption(ciphertext)
-        return received_msg
-
-    def set_symmetric_crypto(self, K, bs, Opponent, iv):
-        self.aes = AES.Cryptosystem(K, bs, Opponent)
-        self.aes.set_initialization_vector(iv)
-        self.aes.print_key()
-
-    def set_public_key_crypto(self, p, q, e):
-        self.rsa = RSA.Cryptosystem(p, q, e)
-
-    def set_key_exchange(self, g, m):
-        self.diffie_hellman = DiffieHellman.KeyExchange(g, m)
+    def secure_receive(self):
+        ciphertext = self.receive()
+        message = self.aes.decryption(ciphertext)
+        return message
 
     def start_session(self):
+        ############## Preparations #################
         ### Sending and receiving the public keys ###
-        N_alice = int(self.receive(4096).decode())
-        e_alice = int(self.receive(128).decode())
+        print("  -------------------- SSH --------------------")
+        print("  >Exchanging publice values . . .")
         N, e = self.rsa.get_public_key()
-        self.send(str(N).encode())
-        self.send(str(e).encode())
-        alice = self.receive(1024).decode()
+        N_alice = int(self.receive().decode('utf-8'))
+        print("  >Receiving N of Alice . . .")
+        e_alice = int(self.receive().decode('utf-8'))
+        print("  >Receiving e of Alice . . .")
+        print("  >Alice's public key has been received.")
+        self.send(str(N).encode('utf-8'))
+        print("  >Sending your N . . .")
+        self.send(str(e).encode('utf-8'))
+        print("  >Sending your e . . .")
+        print("  >Your public key has been sent.")
         bob = self.username
-        self.send(bob.encode())
-        Ra, public_a, Rb, public_b = self.perform_step1()
-        K, H = self.perform_step2(
-            alice, bob, Ra, Rb, public_a, public_b)
-        bob_auth = bool(self.receive(1024).decode())
+        alice = self.receive().decode('utf-8')
+        print("  >Receiving Alice's username . . .")
+        self.send(bob.encode('utf-8'))
+        print("  >Sending your username . . .")
+        print("  >Public values have been received.")
+        #############################################
+        b = int.from_bytes(get_random_bytes(256), 'little')
+        print("\n  >Your b is equal to: {}\n".format(b))
+        self.diffie_hellman.set_new_secret_exponent(b)
+        Rb = int.from_bytes(get_random_bytes(32), 'little')
+        gb = self.diffie_hellman.get_public_value()
+        Ra, ga = self.perform_step1()
+        K = self.diffie_hellman.get_secret_key(ga)
+        H = self.diffie_hellman.generate_H(alice, bob, Ra, Rb, ga, gb, K)
+        Sb = self.generate_signature(H, bob)
+        print("  >Authenticating . . .")
+        bob_auth = self.perform_step2(Sb, Rb, gb)
+        self.diffie_hellman.destroy_exponent()
         if bob_auth:
             print("  >Congratulations: you are now authenticated successfully.")
             print("  >Now it is {}'s time, authenticating . . ." .format(self.opponent))
-            alice_auth = self.perform_step3(self.alice, H, K, N_alice, e_alice)
+            alice_auth = self.perform_step3(K, N_alice, e_alice, alice, H)
             if alice_auth:
+                print("  >Congratulations: {} is authenticated successfully." .format(
+                    self.opponent))
+                print("  >Now you can start communicating with {} securely.\n" .format(
+                    self.opponent))
                 return True
             print("  >Unfortunately, {} failed to be authenticated successfully." .format(
                 self.opponent))
@@ -101,8 +128,8 @@ class Server (object):
             if not (bob_conf) and not(bob_rej):
                 print("  >Please only enter either (Y/y) or (N/n) . . .")
             else:
-                new_exchange_alice = self.receive(1024).decode()
-                self.send(new_exchange_bob.encode())
+                new_exchange_alice = self.receive().decode('utf-8')
+                self.send(new_exchange_bob.encode('utf-8'))
                 alice_rej = new_exchange_alice == "n" or new_exchange_alice == "N"
                 if bob_rej:
                     self.disconnect()
@@ -120,48 +147,55 @@ class Server (object):
     ##############################################
     ################## Step (1) ##################
     def perform_step1(self):
-        Rb = int.from_bytes(get_random_bytes(32), 'little')
-        b = int.from_bytes(get_random_bytes(256), 'little')
-        print("\n  >Your b is equal to: {}\n".format(b))
-        self.diffie_hellman.set_new_secret_exponent(b)
-        public_b = self.diffie_hellman.get_public_value()
-        Ra = int(self.receive(256).decode())
-        public_a = int(self.receive(2048).decode())
-        return (Ra, public_a, Rb, public_b)
+        Ra = int(self.receive().decode('utf-8'))
+        ga = int(self.receive().decode('utf-8'))
+        return (Ra, ga)
 
     ##############################################
     ################## Step (2) ##################
-    def perform_step2(self, alice, bob, Ra, Rb, public_a, public_b):
-        K = self.diffie_hellman.get_secret_key(public_a)
-        H = self.diffie_hellman.generate_H(
-            alice, bob, Ra, Rb, public_a, public_b, K)
-        M = bytes(bob.encode()) + H
-        Sb = self.rsa.digital_sign(int.from_bytes(M, 'little'))
-        self.send(str(Rb).encode())
-        self.send(str(public_b).encode())
-        self.send(str(Sb).encode())
-        print("  >Authenticating . . .")
-        self.diffie_hellman.destroy_exponent()
-        return (K, H)
+    def perform_step2(self, Sb, Rb, gb):
+        ### Sending Sb, Rb, and public value of Bob ####
+        self.send(str(Rb).encode('utf-8'))
+        self.send(str(gb).encode('utf-8'))
+        self.send(str(Sb).encode('utf-8'))
+        auth = bool(self.receive().decode('utf-8'))
+        return auth
 
     ##############################################
     ################## Step (3) ##################
-    def perform_step3(self, alice, H, K, N_alice, e_alice):
-        encryptedtext = b64decode(self.receive(128))
-        iv = encryptedtext[:16]
-        self.set_symmetric_crypto(K, 16, self.opponent, iv)
-        cipher = Symmetric.new(self.aes.key, Symmetric.MODE_CBC, iv)
-        message = unpad(cipher.decrypt(encryptedtext[16:]), 16)
-        alice_len = len(bytes(alice.encode()))
-        Sa_bytes = message.to_bytes(
-            mod_op.getBytesLen(message), 'little')[alice_len:]
-        Sa = int.from_bytes(Sa_bytes, 'little')
-        authenticated = self.rsa.verify_signature(
-            N_alice, e_alice, Sa, alice, H)
-        if authenticated:
-            print("  >Congratulations: {} is authenticated successfully." .format(
-                self.opponent))
-            print("  >Now you can start communicating with {} securely." .format(
-                self.opponent))
-        self.send(str(authenticated).encode())
-        return authenticated
+    def perform_step3(self, K, N_alice, e_alice, alice, H):
+        encryptedtext = b64decode(self.receive())
+        Sa = self.decrypt_and_extract(K, encryptedtext, alice)
+        auth = self.rsa.verify_signature(N_alice, e_alice, Sa, alice, H)
+        if auth:
+            self.send(str(auth).encode('utf-8'))
+        else:
+            self.send("".encode('utf-8'))
+        return auth
+
+    def set_symmetric_crypto(self, K, bs, Opponent):
+        self.aes = AES.Cryptosystem(K, bs, Opponent)
+        self.aes.print_key()
+
+    def set_public_key_crypto(self, p, q, e):
+        self.rsa = RSA.Cryptosystem(p, q, e)
+
+    def set_key_exchange(self, g, m):
+        self.diffie_hellman = DiffieHellman.KeyExchange(g, m)
+
+    def generate_signature(self, H, user):
+        ########## Signing ==> S = [H, user] ############
+        M = int.from_bytes((bytes(user.encode()) + H), 'little')
+        S = self.rsa.digital_sign(M)
+        return S
+
+    def decrypt_and_extract(self, K, ciphertext, alice):
+        iv = ciphertext[:16]
+        self.set_symmetric_crypto(K, 16, self.opponent)
+        self.aes.set_initialization_vector(iv)
+        cipher = SymCrypto.new(self.aes.key, SymCrypto.MODE_CBC, iv)
+        M = unpad(cipher.decrypt(ciphertext[self.aes.bs:]), self.aes.bs)
+        a_len = len(bytes(alice.encode()))
+        S_bytes = M[a_len:]
+        S = int.from_bytes(S_bytes, 'little')
+        return S
