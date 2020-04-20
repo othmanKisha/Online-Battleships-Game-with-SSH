@@ -20,7 +20,6 @@ class Server (object):
         self.opponent = opponent
         self.conn_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.BUFF_SIZE = 8192
         self.username = username
         self.set_key_exchange(g, m)
         self.set_public_key_crypto(p, q, e)
@@ -74,10 +73,10 @@ class Server (object):
         print("  >Exchanging publice values . . .")
         N, e = self.rsa.get_public_key()
         N_alice = int(self.receive().decode('utf-8'))
-        print("  >Receiving N of Alice . . .")
+        print("  >Receiving N of {} . . .".format(self.opponent))
         e_alice = int(self.receive().decode('utf-8'))
-        print("  >Receiving e of Alice . . .")
-        print("  >Alice's public key has been received.")
+        print("  >Receiving e of {} . . .".format(self.opponent))
+        print("  >{}'s public key has been received.".format(self.opponent))
         self.send(str(N).encode('utf-8'))
         print("  >Sending your N . . .")
         self.send(str(e).encode('utf-8'))
@@ -85,7 +84,7 @@ class Server (object):
         print("  >Your public key has been sent.")
         bob = self.username
         alice = self.receive().decode('utf-8')
-        print("  >Receiving Alice's username . . .")
+        print("  >Receiving {}'s username . . .".format(self.opponent))
         self.send(bob.encode('utf-8'))
         print("  >Sending your username . . .")
         print("  >Public values have been received.")

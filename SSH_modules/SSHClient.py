@@ -20,7 +20,6 @@ class Client (object):
         self.opponent = opponent
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.BUFF_SIZE = 8192
         self.username = username
         self.set_key_exchange(g, m)
         self.set_public_key_crypto(p, q, e)
@@ -78,15 +77,15 @@ class Client (object):
         print("  >Sending your e . . .")
         print("  >Your public key has been sent.")
         N_bob = int(self.receive().decode('utf-8'))
-        print("  >Receiving N of Bob . . .")
+        print("  >Receiving N of {} . . .".format(self.opponent))
         e_bob = int(self.receive().decode('utf-8'))
-        print("  >Receiving e of Bob . . .")
-        print("  >Bob's public key has been received.")
+        print("  >Receiving e of {} . . .".format(self.opponent))
+        print("  >{}'s public key has been received.".format(self.opponent))
         alice = self.username
         self.send(alice.encode('utf-8'))
         print("  >Sending your username . . .")
         bob = self.receive().decode('utf-8')
-        print("  >Receiving Bob's username . . .")
+        print("  >Receiving {}'s username . . .".format(self.opponent))
         print("  >Public values have been received.")
         #############################################
         a = int.from_bytes(get_random_bytes(256), 'little')
@@ -100,7 +99,7 @@ class Client (object):
         Sa = self.generate_signature(H, alice)
         print("  >Authenticating . . .")
         if bob_auth:
-            print("  >Congratulation: {} is authenticated successfully." .format(
+            print("  >Congratulations: {} is authenticated successfully." .format(
                 self.opponent))
             print("  >Now it is your time, authenticating . . .")
             alice_auth = self.perform_step3(K, Sa, bytes(alice.encode()))
