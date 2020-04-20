@@ -158,7 +158,7 @@ class Client (object):
         message = alice_bytes + Sa_bytes
         cipher = Symmetric.new(self.aes.key, Symmetric.MODE_CBC, self.aes.iv)
         encryptedtext = self.aes.iv + \
-            cipher.encrypt(pad(message.decode().encode('utf-8'), 16))
+            cipher.encrypt(pad(message.decode(errors='ignore').encode('utf-8'), 16))
         self.send(b64encode(encryptedtext))
         authenticated = bool(self.receive(1024).decode())
         if authenticated:
