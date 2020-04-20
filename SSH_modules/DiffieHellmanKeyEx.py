@@ -24,22 +24,21 @@ class KeyExchange (object):
         self.exp = exp
 
     def get_public_value(self):
-        public_value = mod_op.repeated_squaring(
-            div=self.g, modulus=self.m, power=self.exp)
+        public_value = mod_op.repeated_squaring(self.g, self.m, self.exp)
         return public_value
 
     # exp_recv is g^(the other's exponent) mod m
     def get_secret_key(self, exp_recv):
-        secret_key = mod_op.repeated_squaring(
-            div=exp_recv, modulus=self.m, power=self.exp)
+        secret_key = mod_op.repeated_squaring(exp_recv, self.m, self.exp)
         return secret_key
 
-    def generate_H(self, id_1, id_2, R_1, R_2, pub_v1, pub_v2, secret):
-        R1_bytes = R_1.to_bytes(mod_op.getBytesLen(R_1), 'little')
-        R2_bytes = R_2.to_bytes(mod_op.getBytesLen(R_2), 'little')
-        pub_v1_bytes = pub_v1.to_bytes(mod_op.getBytesLen(pub_v1), 'little')
-        pub_v2_bytes = pub_v2.to_bytes(mod_op.getBytesLen(pub_v2), 'little')
-        secret_bytes = secret.to_bytes(mod_op.getBytesLen(secret), 'little')
-        H = sha256(bytes(id_1.encode()) + bytes(id_2.encode()) + R1_bytes + R2_bytes +
-                   pub_v1_bytes + pub_v2_bytes + secret_bytes).digest()
+    def generate_H(self, id1, id2, Ra, Rb, ga, gb, gab):
+        id1_B = bytes(id1.encode())
+        id2_B = bytes(id2.encode())
+        Ra_B = Ra.to_bytes(mod_op.getBytesLen(Ra), 'little')
+        Rb_B = Rb.to_bytes(mod_op.getBytesLen(Rb), 'little')
+        ga_B = ga.to_bytes(mod_op.getBytesLen(ga), 'little')
+        gb_B = gb.to_bytes(mod_op.getBytesLen(gb), 'little')
+        gab_B = gab.to_bytes(mod_op.getBytesLen(gab), 'little')
+        H = sha256(id1_B + id2_B + Ra_B + Rb_B + ga_B + gb_B + gab_B).digest()
         return H

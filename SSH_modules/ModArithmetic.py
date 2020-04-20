@@ -4,6 +4,8 @@ import math
 ########################### Phase 3: Modular Arithmetic Helper Methods ##################################
 #########################################################################################################
 
+# Used the method here for performing repeated squaring: https://stackoverflow.com/questions/16421311/python-implementing-pow-for-exponentiation-by-squaring-for-very-large-integers
+
 
 def repeated_squaring(div, modulus, power):
     x = 1
@@ -19,6 +21,7 @@ def repeated_squaring(div, modulus, power):
 def getBytesLen(bytes_num):
     return math.ceil(bytes_num.bit_length() / 8)
 
+
 # Used the python code from the link attached in the document: https://stackoverflow.com/questions/4798654/modular-multiplicative-inverse-function-in-python
 
 
@@ -28,6 +31,7 @@ def multiplicative_inverse(a, m):
         raise Exception('modular inverse does not exist')
     else:
         return x % m
+
 
 # Used from a comment from the link attached in the document for pdf at page two: http://anh.cs.luc.edu/331/notes/xgcd.pdf
 

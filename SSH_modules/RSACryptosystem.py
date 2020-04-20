@@ -17,29 +17,26 @@ class Cryptosystem (object):
     # The encryption method {C = (plaintext ^ e) mod N} ==> C = {plaintext}Bob
     def encryption(self, plaintext, e, N):
         # e and N here are the public key of the other party
-        ciphertext = mod_op.repeated_squaring(
-            div=plaintext, modulus=N, power=e)
+        ciphertext = mod_op.repeated_squaring(plaintext, N, e)
         ciphertext = b64encode(ciphertext)
         return ciphertext
 
     # The decryption method {plaintext = (C ^ d) mod N} ==> plaintext = [C]Alice
     def decryption(self, ciphertext):
         ciphertext = b64decode(ciphertext)
-        plaintext = mod_op.repeated_squaring(
-            div=ciphertext, modulus=self.N, power=self.d)
+        plaintext = mod_op.repeated_squaring(ciphertext, self.N, self.d)
         return plaintext
 
     # Digital signing method {signature = (plaintext ^ d) mod N} ==> signature = [plaintext]Alice
     def digital_sign(self, plaintext):
-        digital_signature = mod_op.repeated_squaring(
-            div=plaintext, modulus=self.N, power=self.d)
+        digital_signature = mod_op.repeated_squaring(plaintext, self.N, self.d)
         return digital_signature
 
     # This method is for signature verification using the other party's public key ==> plaintext = {signature}other party
-    def verify_signature(self, N, e, S, id, H):
-        verify = mod_op.repeated_squaring(div=S, modulus=N, power=e)
-        id_bytes = bytes(id.encode())
-        test = int.from_bytes((id_bytes + H), 'little')
+    def verify_signature(self, N, e, S, unique_id, H):
+        verify = mod_op.repeated_squaring(S, N, e)
+        unique_id_Bytes = bytes(unique_id.encode())
+        test = int.from_bytes((unique_id_Bytes + H), 'little')
         if verify == test:
             return True
         return False

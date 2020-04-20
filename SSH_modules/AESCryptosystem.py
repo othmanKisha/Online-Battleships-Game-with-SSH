@@ -24,8 +24,7 @@ class Cryptosystem (object):
     def set_initialization_vector(self, iv):
         self.iv = iv
         print("  --------------------------------------------------------------------")
-        print("  >The IV value received from {}: {}" .format(
-            self.opponent, self.iv.hex()))
+        print("  >The IV value received: {}" .format(self.iv.hex()))
         print("  --------------------------------------------------------------------")
 
     # The Encryption Method {IV is one of the parameters of the method}
@@ -34,8 +33,7 @@ class Cryptosystem (object):
         padded_text = pad(plaintext.encode('utf-8'), self.bs)
         ciphertext = self.iv + cipher.encrypt(padded_text)
         print("  --------------------------------------------------------------------")
-        print("  >The encrypted value sent to {}: {}" .format(
-            self.opponent, ciphertext[self.bs:].hex()))
+        print("  >The encrypted value: {}" .format(ciphertext[self.bs:].hex()))
         print("  --------------------------------------------------------------------")
         ciphertext = b64encode(ciphertext)
         return ciphertext
