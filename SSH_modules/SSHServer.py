@@ -110,6 +110,7 @@ class Server (object):
                     self.opponent))
                 print("  >Now you can start communicating with {} securely.\n" .format(
                     self.opponent))
+                self.aes.print_key()
                 return True
             print("  >Unfortunately, {} failed to be authenticated successfully." .format(
                 self.opponent))
@@ -174,7 +175,6 @@ class Server (object):
 
     def set_symmetric_crypto(self, K, bs, Opponent):
         self.aes = AES.Cryptosystem(K, bs, Opponent)
-        self.aes.print_key()
 
     def set_public_key_crypto(self, p, q, e):
         self.rsa = RSA.Cryptosystem(p, q, e)

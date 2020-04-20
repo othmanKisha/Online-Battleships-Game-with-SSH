@@ -122,14 +122,16 @@ class Board (object):
             print("    __ __ __ __ __ __")
         print("")
 
-    def check_score(self, oppo_ships, turn):
+    def check_score(self, oppo_ships, turn, score):
         # You will lose if all of your ships are boomed
         if self.result['boomed'] == int(self.ships_num):
             print("  You lost.")
+            score += 1
             self.result['status'] = True
         # You will win if all of your opponent's ships are hit
         elif self.result['hit'] == int(oppo_ships):
             print("  Congratulations, You Won.")
+            score += 10
             self.result['status'] = True
         # You have only 4 chances of missing ships
         elif self.result['remaining'] == 0 and turn == self.player:
@@ -138,4 +140,4 @@ class Board (object):
         else:
             self.result['status'] = False
 
-        return self.result['status']
+        return self.result['status'], score

@@ -15,6 +15,7 @@ def main():
     username = input("  Please enter your username: ")
     opponent = input("  please enter your opponent's name: ")
     turn = name
+    score = 0
     client = SSH.Client(4321, opponent, username, p, q, e, m, g)
     game_board = game.Board(name)
     game_board.initialize_board()
@@ -51,16 +52,20 @@ def main():
                         break
                 client.secure_send(row)
                 client.secure_send(col)
-                res = client.secure_receive()
+                res = client.secure_receive().decode('utf-8')
                 game_board.guess_place(res, row, col)
                 turn = opponent
 
-            if game_board.check_score(oppo_ships, turn):
+            check, score = game_board.check_score(oppo_ships, turn, score)
+            if check:
                 break
             game_board.print_board("  The current view of the game: ")
 
+        print("  Score:- You: {} - {}: {}\n".format(score // 10, score % 10, opponent))
         if client.end_session():
             break
+        game_board = game.Board(name)
+        game_board.initialize_board()
 
 
 if __name__ == '__main__':

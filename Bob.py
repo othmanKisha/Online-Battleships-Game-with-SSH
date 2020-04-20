@@ -15,6 +15,7 @@ def main():
     username = input("  Please enter your username: ")
     opponent = input("  please enter your opponent's name: ")
     turn = opponent
+    score = 0
     server = SSH.Server(4321, opponent, username, p, q, e, m, g)
     game_board = game.Board(name)
     game_board.initialize_board()
@@ -55,12 +56,16 @@ def main():
                 server.secure_send(res)
                 turn = name
 
-            if game_board.check_score(oppo_ships, turn):
+            check, score = game_board.check_score(oppo_ships, turn, score)
+            if check:
                 break
             game_board.print_board("  The current view of the game: ")
 
+        print("  Score:- You: {} - {}: {}\n".format(score // 10, score % 10, opponent))
         if server.end_session():
             break
+        game_board = game.Board(name)
+        game_board.initialize_board()
 
 
 if __name__ == '__main__':
