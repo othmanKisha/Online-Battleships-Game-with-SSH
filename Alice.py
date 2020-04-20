@@ -1,94 +1,63 @@
-import socket
-from Board import Board
-from SSHClient import SSHClient
-from AESCryptosystem import Cryptosystem as AESCrypto
-from RSACryptosystem import Cryptosystem as RSACrypto
-from DiffieHellmanKeyEx import KeyExchange as DiffieHellman
-#from DiffieHellmanKeyEx import repeated_squaring, Mod
+from Board import Board as game
+from SSH_modules import SSHClient as SSH
+import math
+
 
 def main():
 
-    aes = AESCrypto("201675760", 16, "Bob")
-    aes.print_key()                                             #Printing the hashed key
-    aes.generate_initialization_vector()                        #Securely random number generated for the IV
-    turn = "Alice"                                              #If turn = alice, alice play, if it is bob then bob play
-    game_board = Board("Alice")                                 #This will contain the board displayed for both players
+    turn = "Alice"
+    # |HARDCODED| two 355 digits primes for p and q, 2048-bits prime for m and generator 2
+    p = 7891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891234567891
+    q = 2357111317192329313741434753596167717379838997101103107109113127131137139149151157163167173179181191193197199211223227229233239241251257263269271277281283293307311313317331337347349353359367373379383389397401409419421431433439443449457461463467479487491499503509521523541547557563569571577587593599601607613617619631641643647653659661673677683691701709719
+    m = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
+    e = 91
+    g = 2
+    #username = input("  Please enter your username: ")
+    client = SSH.Client(4321, "Bob", "username", p, q, e, m, g)
+    game_board = game.Board("Alice")
     game_board.initialize_board()
-
-    print("  Welcome To Online battleships game designed by Othman Kisha")
-    print("----------------------------- Hello Alice ------------------------------")
-    print("  First Enter the number of your ships and then place them in the game board, ")
-    print("  After that you will be connected with player 2 and start the game.")
-    print("  PLease Note that the board is 6x6 matrix, enter the index from 0 to 5 only. \n")
-    
-    shipsNum = input("  Please enter the number of ships: ")
-    print("  Please place your ships (Your ships must be of one unit only) by inserting the index. ")
-    game_board.insert_ship(shipsNum)
-    game_board.print_board("  This is how your ships are placed: ") 
-
-    print("  Connecting to player 2 . . . . .")
-    playerOneSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    hostIP = socket.gethostbyname(socket.gethostname())         #because the test will be using the same pc, i used the localhost ip
-    port = 6594
-    connect = False
-
-    #This is to wait untill connected to player 2(server)
-    while not connect:
-        try:
-            playerOneSocket.connect((hostIP, port))
-            connect = True
-        except Exception as _:
-            pass  
-
-    print("  Congartulations: you are connect, now you can start the game. ")
-    print("  IP address of your opponent: {}" .format(hostIP))
-    game_board.print_board("  Your current view of the field:  ")
-
-    EshipsNum = aes.encryption(shipsNum)    
-    playerOneSocket.send(EshipsNum)                             #Sending the encrypted number of ships to the opponent
-    DoppoShips = playerOneSocket.recv(128)                      #Receiving the encrypted (128-bits) number of ships of the oponent
-    oppoShips = aes.decryption(DoppoShips)                      #Decrypting the encrypted number of ships of the opponent
-    print("  Your opponent have {} ships placed in the battle." .format(oppoShips.decode('utf-8')))
+    game_board.print_welcome_message()
+    print("  Connecting to Bob . . .")
+    client.connect()
 
     while True:
-        if turn != "Alice":
-            print("--------- Bob's turn -------")
-            Drow = playerOneSocket.recv(128)                        #The (decrypted 128-bits) guessed row by bob
-            row = aes.decryption(Drow)                              #Decrypting the row number
-            Dcol = playerOneSocket.recv(128)                        #The (decrypted 128-bits) guessed column by bob
-            col = aes.decryption(Dcol)                              #Decrypting the column number
+        if not client.start_session():
+            break
+        ships_num = game_board.set_ships_number()
+        game_board.insert_ship()
+        game_board.print_board("  This is how your ships are placed: ")
+        client.secure_send(ships_num)
+        oppo_ships = client.secure_receive(128)
+        print("  Bob have {} ships placed in the battle." .format(oppo_ships))
 
-            res = game_board.guess_receive(row, col)  
-            Eres = aes.encryption(res)                              #Encrypting the response
-            playerOneSocket.send(Eres)                              #The (Encrypted) response will be sent to the opponent   
-            turn = "Alice"                                          #Turn is changed to you
+        while True:
+            if turn != "Alice":
+                print("--------- Bob's turn -------")
+                row = client.secure_receive(128)
+                col = client.secure_receive(128)
+                res = game_board.guess_receive(row, col)
+                client.secure_send(res)
+                turn = "Alice"
+            else:
+                print("--------- Your turn -------")
+                while True:
+                    row = input("  Enter your row guess: ")
+                    col = input("  Enter your column guess: ")
+                    if game_board.is_guess_valid(row, col):
+                        break
+                client.secure_send(row)
+                client.secure_send(col)
+                res = client.secure_receive(128)
+                game_board.guess_place(res, row, col)
+                turn = "Bob"
 
-        else:
-            print("--------- Your turn -------")
-            while True:
-                row = input("  Enter your row guess: ")             #The guessed row by you    
-                col = input("  Enter your column guess: ")          #The guessed column by you
-                if game_board.is_guess_valid(row, col):
-                    break     
-                
-            Erow = aes.encryption(row)
-            playerOneSocket.send(Erow)
-            Ecol = aes.encryption(col)
-            playerOneSocket.send(Ecol)
-            Dres = playerOneSocket.recv(128)                        #The (Encrypted) response received from the opponent
-            res = aes.decryption(Dres).decode('utf-8')
-            
-            game_board.guess_place(res, row, col)
-            turn = "Bob"                                            #Turn is changed to player 2
-        
-        if game_board.check_score(shipsNum, oppoShips, turn):
+            if game_board.check_score(oppo_ships, turn):
+                break
+            game_board.print_board("  The current view of the game: ")
+
+        if client.end_session():
             break
 
-        game_board.print_board("  The current view of the game: ")
-
-    #This is just for waiting and displaying the last messeges
-    _ = input("\n  Press any key to close . . .")
-    playerOneSocket.close()                                     #End the game
 
 if __name__ == '__main__':
     main()

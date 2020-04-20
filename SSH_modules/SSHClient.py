@@ -25,13 +25,11 @@ class Client (object):
         self.set_public_key_crypto(p, q, e)
 
     def connect(self):
-        connect = False
         # This is to wait untill connected to player 2(server)
-        while not connect:
+        while True:
             try:
-                # Here because we are connecting to the same machine, both will have the same ip
                 self.socket.connect((self.ip, self.port))
-                connect = True
+                break
             except Exception as _:
                 pass
         print("  Congartulations: you are connect, now you can start the game. ")
@@ -153,14 +151,15 @@ class Client (object):
     ################## Step (3) ##################
     def perform_step3(self, alice, H, K):
         self.set_symmetric_crypto(K, 16, self.opponent)
-        M = bytes(alice.encode()) + H
+        alice_bytes = bytes(alice.encode())
+        M = alice_bytes + H
         Sa = self.rsa.digital_sign(int.from_bytes(M, 'little'))
-        Sa_len = mod_op.getBytesLen(Sa)
+        Sa_bytes = Sa.to_bytes(mod_op.getBytesLen(Sa), 'little')
+        message = alice_bytes + Sa_bytes
         cipher = Symmetric.new(self.aes.key, Symmetric.MODE_CBC, self.aes.iv)
-        C = self.aes.iv + \
-            cipher.encrypt(pad(bytes(alice.encode()) +
-                               (Sa.to_bytes(Sa_len, 'little')), 16))
-        self.send(b64encode(C))
+        encryptedtext = self.aes.iv + \
+            cipher.encrypt(pad(message.decode().encode('utf-8'), 16))
+        self.send(b64encode(encryptedtext))
         authenticated = bool(self.receive(1024).decode())
         if authenticated:
             print("  >Congratulations: You are now authenticated.")

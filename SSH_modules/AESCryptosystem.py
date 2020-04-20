@@ -28,10 +28,6 @@ class Cryptosystem (object):
             self.opponent, self.iv.hex()))
         print("--------------------------------------------------------------------")
 
-    def encryption_bytes(self, plaintext):
-        cipher = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
-        return b64encode(self.iv + cipher.encrypt(pad(plaintext, self.bs)))
-
     # The Encryption Method {IV is one of the parameters of the method}
     def encryption(self, plaintext):
         cipher = AES.new(self.key, AES.MODE_CBC, iv=self.iv)

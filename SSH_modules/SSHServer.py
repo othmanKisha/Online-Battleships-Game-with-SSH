@@ -30,7 +30,6 @@ class Server (object):
         self.conn_socket.listen(5)
         # accepting the connection, self.alice is unique id for alice
         self.socket, self.alice = self.conn_socket.accept()
-
         print("  Congartulations: you are connect, now you can start the game. ")
         print("  IP address of {}: {}" .format(self.opponent, self.alice[0]))
 
@@ -148,13 +147,14 @@ class Server (object):
     ##############################################
     ################## Step (3) ##################
     def perform_step3(self, alice, H, K, N_alice, e_alice):
-        M = b64decode(self.receive(128))
-        iv = M[:16]
+        encryptedtext = b64decode(self.receive(128))
+        iv = encryptedtext[:16]
         self.set_symmetric_crypto(K, 16, self.opponent, iv)
         cipher = Symmetric.new(self.aes.key, Symmetric.MODE_CBC, iv)
-        M = unpad(cipher.decrypt(M[16:]), 16)
+        message = unpad(cipher.decrypt(encryptedtext[16:]), 16)
         alice_len = len(bytes(alice.encode()))
-        Sa_bytes = M.to_bytes(mod_op.getBytesLen(M), 'little')[alice_len:]
+        Sa_bytes = message.to_bytes(
+            mod_op.getBytesLen(message), 'little')[alice_len:]
         Sa = int.from_bytes(Sa_bytes, 'little')
         authenticated = self.rsa.verify_signature(
             N_alice, e_alice, Sa, alice, H)
