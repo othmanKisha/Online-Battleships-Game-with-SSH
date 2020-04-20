@@ -9,8 +9,8 @@ This project focuses in implementing battleships game with TCP sockets and provi
 
 ## Usage
 
-- run [Alice](./alice.py).
-- run [Bob](./bob.py) on same/other machine.
+- run [Alice](https://github.com/othmanKisha/Online-Battleships-Game-with-SSH/blob/Online-Battleships-Game-with-SSH/Alice.py).
+- run [Bob](https://github.com/othmanKisha/Online-Battleships-Game-with-SSH/blob/Online-Battleships-Game-with-SSH/Bob.py) on same/other machine.
 
 ================================================================================================================
 
