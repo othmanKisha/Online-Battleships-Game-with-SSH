@@ -23,20 +23,20 @@ class Cryptosystem (object):
 
     def set_initialization_vector(self, iv):
         self.iv = iv
-        print("--------------------------------------------------------------------")
-        print("  The IV value received from {}: {}" .format(
+        print("  --------------------------------------------------------------------")
+        print("  >The IV value received from {}: {}" .format(
             self.opponent, self.iv.hex()))
-        print("--------------------------------------------------------------------")
+        print("  --------------------------------------------------------------------")
 
     # The Encryption Method {IV is one of the parameters of the method}
     def encryption(self, plaintext):
         cipher = AES.new(self.key, AES.MODE_CBC, iv=self.iv)
         padded_text = pad(plaintext.encode('utf-8'), self.bs)
         ciphertext = self.iv + cipher.encrypt(padded_text)
-        print("--------------------------------------------------------------------")
-        print("  The encrypted value sent to {}: {}" .format(
+        print("  --------------------------------------------------------------------")
+        print("  >The encrypted value sent to {}: {}" .format(
             self.opponent, ciphertext[self.bs:].hex()))
-        print("--------------------------------------------------------------------")
+        print("  --------------------------------------------------------------------")
         ciphertext = b64encode(ciphertext)
         return ciphertext
 
@@ -51,9 +51,9 @@ class Cryptosystem (object):
 
     # Method for printing the hashed key
     def print_key(self):
-        print("--------------------------------------------------------------------")
-        print("  The key used for this cryptosystem is {} " .format(self.key.hex()))
-        print("--------------------------------------------------------------------")
+        print("  --------------------------------------------------------------------")
+        print("  >The key used for this cryptosystem is {} " .format(self.key.hex()))
+        print("  --------------------------------------------------------------------")
 
     # This method is to "destroy" the key at the end of a session
     def destroy_key(self):

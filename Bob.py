@@ -12,12 +12,13 @@ def main():
     m = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
     e = 51
     g = 2
-    #username = input("  Please enter your username: ")
-    server = SSH.Server(4321, "Alice", "username", p, q, e, m, g)
-    game_board = game.Board("Bob")
+    username = input("  Please enter your username: ")
+    opponent = input("  please enter your opponent's username: ")
+    server = SSH.Server(4321, opponent, username, p, q, e, m, g)
+    game_board = game.Board(username)
     game_board.initialize_board()
     game_board.print_welcome_message()
-    print("  Connecting to Alice . . .")
+    print("  Connecting to {} . . .".format(opponent))
     server.bind()
 
     while True:
@@ -29,11 +30,12 @@ def main():
         game_board.print_board("  This is how your ships are placed: ")
         oppo_ships = server.secure_receive()
         server.secure_send(ships_num)
-        print("  Your opponent have {} ships placed in the battle." .format(oppo_ships))
+        print("  {} has {} ships placed in the battle." .format(
+            opponent, oppo_ships))
 
         while True:
             if turn == "Bob":
-                print("--------- Your turn -------")
+                print("  --------- Your turn -------")
                 while True:
                     row = input("  Enter your row guess: ")
                     col = input("  Enter your column guess: ")
@@ -45,7 +47,7 @@ def main():
                 game_board.guess_place(res, row, col)
                 turn = "Alice"
             else:
-                print("--------- Alice's turn -------")
+                print("  --------- {}'s turn -------".format(opponent))
                 row = server.secure_receive()
                 col = server.secure_receive()
                 res = game_board.guess_receive(row, col)
