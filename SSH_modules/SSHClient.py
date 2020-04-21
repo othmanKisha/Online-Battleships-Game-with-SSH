@@ -89,7 +89,6 @@ class Client (object):
         print("  >Public values have been received.")
         #############################################
         a = int.from_bytes(get_random_bytes(256), 'little')
-        print("\n  >Your a is equal to: {}\n".format(a))
         self.diffie_hellman.set_new_secret_exponent(a)
         Ra = int.from_bytes(get_random_bytes(32), 'little')
         ga = self.diffie_hellman.get_public_value()

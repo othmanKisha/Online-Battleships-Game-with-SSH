@@ -90,7 +90,6 @@ class Server (object):
         print("  >Public values have been received.")
         #############################################
         b = int.from_bytes(get_random_bytes(256), 'little')
-        print("\n  >Your b is equal to: {}\n".format(b))
         self.diffie_hellman.set_new_secret_exponent(b)
         Rb = int.from_bytes(get_random_bytes(32), 'little')
         gb = self.diffie_hellman.get_public_value()
