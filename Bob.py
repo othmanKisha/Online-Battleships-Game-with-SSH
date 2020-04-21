@@ -25,6 +25,7 @@ def main():
 
     while True:
         if not server.start_session():
+            server.disconnect()
             break
         print("  ------------ Secured Connection ------------")
         ships_num = game_board.set_ships_number()
