@@ -1,4 +1,3 @@
-from base64 import b64encode, b64decode
 from . import ModArithmetic as mod_op
 ########################################################################################
 ########################### Phase 3: RSA Cryptosystem ##################################
@@ -18,12 +17,10 @@ class Cryptosystem (object):
     def encryption(self, plaintext, e, N):
         # e and N here are the public key of the other party
         ciphertext = mod_op.repeated_squaring(plaintext, N, e)
-        ciphertext = b64encode(ciphertext)
         return ciphertext
 
     # The decryption method {plaintext = (C ^ d) mod N} ==> plaintext = [C]Alice
     def decryption(self, ciphertext):
-        ciphertext = b64decode(ciphertext)
         plaintext = mod_op.repeated_squaring(ciphertext, self.N, self.d)
         return plaintext
 
@@ -35,8 +32,7 @@ class Cryptosystem (object):
     # This method is for signature verification using the other party's public key ==> plaintext = {signature}other party
     def verify_signature(self, N, e, S, unique_id, H):
         verify = mod_op.repeated_squaring(S, N, e)
-        unique_id_Bytes = bytes(unique_id.encode())
-        test = int.from_bytes((unique_id_Bytes + H), 'little')
+        test = int.from_bytes((bytes(unique_id.encode()) + H), 'little')
         if verify == test:
             return True
         return False
