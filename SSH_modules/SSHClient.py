@@ -103,7 +103,6 @@ class Client (object):
                 self.opponent))
             print("  >Now it is your time, authenticating . . .")
             alice_auth = self.perform_step3(K, Sa, bytes(alice.encode()))
-            print(alice_auth)
             if alice_auth:
                 print("  >Congratulations: You are now authenticated.")
                 print("  >Now you can start communicating with {} securely.\n" .format(

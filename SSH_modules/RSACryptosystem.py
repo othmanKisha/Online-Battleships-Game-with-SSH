@@ -33,9 +33,7 @@ class Cryptosystem (object):
     def verify_signature(self, N, e, S, unique_id, H):
         verify = mod_op.repeated_squaring(S, N, e)
         test = int.from_bytes((bytes(unique_id.encode()) + H), 'little')
-        if verify == test:
-            return True
-        return False
+        return verify == test
 
     # This method to get the public key without asking for N and e
     def get_public_key(self):
